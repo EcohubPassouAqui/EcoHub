@@ -1,10 +1,13 @@
 -- // EcoHub UI Library
+
+-- // Services
 local UIS     = game:GetService("UserInputService")
 local TS      = game:GetService("TweenService")
 local RS      = game:GetService("RunService")
 local Players = game:GetService("Players")
 local lp      = Players.LocalPlayer
 
+-- // Error System
 local _ErrorLog = {}
 local function _Err(scope, msg, ...)
 	local full = string.format("[EcoHub][%s] ERROR: %s", tostring(scope), string.format(tostring(msg), ...))
@@ -12,6 +15,7 @@ local function _Err(scope, msg, ...)
 	print(full)
 end
 
+-- // Mobile Check
 do
 	local mobile = UIS.TouchEnabled and not UIS.KeyboardEnabled and not UIS.MouseEnabled
 	if mobile then
@@ -20,12 +24,13 @@ do
 	end
 end
 
+-- // Cleanup System
 local function cleanOld(parent)
 	if not parent then return end
 	for _, v in ipairs(parent:GetChildren()) do
 		if type(v.Name) == "string" and v.Name:sub(1,7) == "ecohub_" then
 			local ok, err = pcall(function() v:Destroy() end)
-			if not ok then _Err("cleanOld", "failed to destroy element: %s", err) end
+			if not ok then _Err("Cleanup", "failed to destroy element: %s", err) end
 		end
 	end
 end
@@ -33,10 +38,10 @@ end
 pcall(function() cleanOld(game:GetService("CoreGui")) end)
 pcall(function() if gethui then cleanOld(gethui()) end end)
 
--- // Icons
+-- // Icon System
 local _iconsOk, _iconsData = pcall(function()
 	return loadstring(game:HttpGet(
-		"https://raw.githubusercontent.com/EcohubPassouAqui/EcoHub/refs/heads/main/icons"
+		"https://raw.githubusercontent.com/EcohubPassouAqui/v2/refs/heads/main/icons"
 	))()
 end)
 if not _iconsOk then
@@ -47,10 +52,9 @@ local function icon(name)
 	return _iconReg["lucide-" .. tostring(name)] or "rbxassetid://0"
 end
 
--- // Extras
-local LOGO_ID  = "rbxassetid://134382458890933"
-local NOISE_ID = "rbxassetid://9968344919"
-
+-- // Constants
+local LOGO_ID   = "rbxassetid://134382458890933"
+local NOISE_ID  = "rbxassetid://9968344919"
 local PANEL_W   = 650
 local PANEL_H   = 450
 local TITLE_H   = 36
@@ -59,6 +63,7 @@ local SIDE_MINI = 42
 local LOGO_H    = 100
 local EL_H      = 36
 
+-- // Theme
 local T = {
 	Accent     = Color3.fromRGB(255, 255, 255),
 	AccentDim  = Color3.fromRGB(200, 200, 200),
@@ -75,7 +80,6 @@ local T = {
 	tabAct     = Color3.fromRGB(240, 240, 240),
 	tabBgHov   = Color3.fromRGB(24,  24,  24),
 	tabBgAct   = Color3.fromRGB(28,  28,  28),
-	searchBg   = Color3.fromRGB(19,  19,  19),
 	avatarBg   = Color3.fromRGB(20,  20,  20),
 	underline  = Color3.fromRGB(255, 255, 255),
 	secText    = Color3.fromRGB(55,  55,  55),
@@ -83,7 +87,6 @@ local T = {
 	elBgHov    = Color3.fromRGB(26,  26,  26),
 	elBorder   = Color3.fromRGB(35,  35,  35),
 	dropBg     = Color3.fromRGB(45,  45,  45),
-	dropItem   = Color3.fromRGB(60,  60,  60),
 	dropSel    = Color3.fromRGB(70,  70,  70),
 	dropBorder = Color3.fromRGB(35,  35,  35),
 	inputBg    = Color3.fromRGB(13,  13,  13),
@@ -94,29 +97,31 @@ local T = {
 	subText    = Color3.fromRGB(170, 170, 170),
 }
 
+-- // UI Instance Helper
 local function N(cls, props)
 	local ok, o = pcall(Instance.new, cls)
 	if not ok then
-		_Err("N", "failed to create instance: %s -> %s", cls, o)
+		_Err("Instance", "failed to create '%s': %s", cls, o)
 		return nil
 	end
 	for k, v in pairs(props) do
 		if k ~= "Parent" then
 			local setOk, setErr = pcall(function() o[k] = v end)
 			if not setOk then
-				_Err("N", "failed to set property %s on %s -> %s", k, cls, setErr)
+				_Err("Instance", "failed to set property '%s' on '%s': %s", k, cls, setErr)
 			end
 		end
 	end
 	if props.Parent then
 		local parentOk, parentErr = pcall(function() o.Parent = props.Parent end)
 		if not parentOk then
-			_Err("N", "failed to set Parent on %s -> %s", cls, parentErr)
+			_Err("Instance", "failed to set Parent on '%s': %s", cls, parentErr)
 		end
 	end
 	return o
 end
 
+-- // Tween Helper
 local function Tw(obj, goal, t, style, dir)
 	if not obj then return end
 	local ok, err = pcall(function()
@@ -125,9 +130,10 @@ local function Tw(obj, goal, t, style, dir)
 			goal
 		):Play()
 	end)
-	if not ok then _Err("Tw", "tween failed: %s", err) end
+	if not ok then _Err("Tween", "tween failed: %s", err) end
 end
 
+-- // UI Utility Functions
 local function Corner(par, r)
 	N("UICorner", { CornerRadius = UDim.new(0, r or 8), Parent = par })
 end
@@ -161,15 +167,17 @@ local function Img(id, par, sz, pos, col, zi)
 	})
 end
 
+-- // Layout Order System
 local _order = 0
 local function NextOrder() _order = _order + 1 return _order end
 
+-- // Element Registry
 local _allElements = {}
-
 local function RegEl(frame, labelText)
 	table.insert(_allElements, { frame = frame, label = string.lower(labelText or "") })
 end
 
+-- // Element Base Frame
 local function ElBase(par, h)
 	local f = N("Frame", {
 		Size             = UDim2.new(1, 0, 0, h or EL_H),
@@ -193,7 +201,7 @@ local function HoverEl(btn, frame)
 	btn.MouseLeave:Connect(function() Tw(frame, {BackgroundColor3 = T.elBg},    0.1) end)
 end
 
--- // Section Elements
+-- // Section Element
 local function MkSection(par, text)
 	_order = _order + 1
 	local wrap = N("Frame", {
@@ -229,7 +237,6 @@ local function MkSection(par, text)
 
 	local lbl = N("TextLabel", {
 		Size              = UDim2.new(1, 0, 1, 0),
-		Position          = UDim2.new(0, 0, 0, 0),
 		BackgroundTransparency = 1,
 		Text              = string.upper(text),
 		TextColor3        = Color3.fromRGB(255, 255, 255),
@@ -240,7 +247,6 @@ local function MkSection(par, text)
 		ZIndex            = 5,
 		Parent            = wrap,
 	})
-
 	N("UIStroke", {
 		Color        = Color3.fromRGB(200, 200, 200),
 		Thickness    = 0.5,
@@ -249,25 +255,23 @@ local function MkSection(par, text)
 		Parent       = lbl,
 	})
 
-	local function loopShimmer()
+	task.spawn(function()
 		while wrap and wrap.Parent do
 			Tw(shimmer, { Position = UDim2.new(-0.2, 0, 0, 0) }, 0)
 			task.wait(0.05)
 			Tw(shimmer, { Position = UDim2.new(1.2, 0, 0, 0) }, 1.6, Enum.EasingStyle.Linear)
 			task.wait(3.2)
 		end
-	end
-	task.spawn(loopShimmer)
+	end)
 
 	return {
-		wrap = wrap,
-		SetTitle = function(_, newText)
-			if lbl then lbl.Text = string.upper(newText) end
-		end,
+		wrap     = wrap,
+		SetTitle = function(_, newText) if lbl then lbl.Text = string.upper(newText) end end,
+		SetDesc  = function(_, _) end,
 	}
 end
 
--- // Elements Toggle
+-- // Toggle Element
 local function MkToggle(par, text, default, cb)
 	local state = default == true
 
@@ -334,19 +338,15 @@ local function MkToggle(par, text, default, cb)
 	HoverEl(btn, f)
 
 	return {
-		Set = function(_, v)
-			state = v == true
-			refresh(state)
-		end,
-		Get = function(_) return state end,
-		SetTitle = function(_, newText)
-			if textLbl then textLbl.Text = newText end
-		end,
+		Set         = function(_, v) state = v == true refresh(state) end,
+		Get         = function(_) return state end,
+		SetTitle    = function(_, newText) if textLbl then textLbl.Text = newText end end,
+		SetDesc     = function(_, _) end,
 		SetCallback = function(_, newCb) cb = newCb end,
 	}
 end
 
--- // Elements CheckBox
+-- // Checkbox Element
 local function MkCheckbox(par, text, default, cb)
 	local state = default == true
 
@@ -393,19 +393,15 @@ local function MkCheckbox(par, text, default, cb)
 	HoverEl(btn, f)
 
 	return {
-		Set = function(_, v)
-			state = v == true
-			refresh(state)
-		end,
-		Get = function(_) return state end,
-		SetTitle = function(_, newText)
-			if textLbl then textLbl.Text = newText end
-		end,
+		Set         = function(_, v) state = v == true refresh(state) end,
+		Get         = function(_) return state end,
+		SetTitle    = function(_, newText) if textLbl then textLbl.Text = newText end end,
+		SetDesc     = function(_, _) end,
 		SetCallback = function(_, newCb) cb = newCb end,
 	}
 end
 
--- // Elements Button
+-- // Button Element
 local function MkButton(par, text, cb)
 	local f = ElBase(par, EL_H)
 	RegEl(f, text)
@@ -430,17 +426,16 @@ local function MkButton(par, text, cb)
 	end)
 
 	return {
-		Frame = f,
-		Get = function(_) return nil end,
-		Set = function(_, _) end,
-		SetTitle = function(_, newText)
-			if textLbl then textLbl.Text = newText end
-		end,
+		Frame       = f,
+		Get         = function(_) return nil end,
+		Set         = function(_, _) end,
+		SetTitle    = function(_, newText) if textLbl then textLbl.Text = newText end end,
+		SetDesc     = function(_, _) end,
 		SetCallback = function(_, newCb) cb = newCb end,
 	}
 end
 
--- // Elements Slider
+-- // Slider Element
 local function MkSlider(par, text, minV, maxV, defV, cb)
 	minV = minV or 0
 	maxV = maxV or 100
@@ -457,7 +452,6 @@ local function MkSlider(par, text, minV, maxV, defV, cb)
 		TextSize = 11, Font = Enum.Font.Gotham,
 		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = f,
 	})
-
 	local badge = N("Frame", {
 		Size = UDim2.new(0,42,0,16), Position = UDim2.new(1,-52,0,6),
 		BackgroundColor3 = Color3.fromRGB(9,9,9), BorderSizePixel = 0, ZIndex = 4, Parent = f,
@@ -470,7 +464,6 @@ local function MkSlider(par, text, minV, maxV, defV, cb)
 		TextSize = 10, Font = Enum.Font.GothamBold,
 		TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5, Parent = badge,
 	})
-
 	local RAIL_H = 3
 	local rail = N("Frame", {
 		Size = UDim2.new(1,-22,0,RAIL_H), Position = UDim2.new(0,11,0,33),
@@ -478,18 +471,15 @@ local function MkSlider(par, text, minV, maxV, defV, cb)
 	})
 	Corner(rail, RAIL_H)
 	Stroke(rail, T.elBorder, 1, 0.25)
-
 	local fill = N("Frame", {
 		Size = UDim2.new(pct,0,1,0), BackgroundColor3 = T.Accent,
 		BorderSizePixel = 0, ZIndex = 5, Parent = rail,
 	})
 	Corner(fill, RAIL_H)
-
 	local inner = N("Frame", {
 		BackgroundTransparency = 1, Position = UDim2.new(0,6,0,0),
 		Size = UDim2.new(1,-12,1,0), ZIndex = 5, Parent = rail,
 	})
-
 	local KSZ = 11
 	local knob = N("Frame", {
 		Size = UDim2.new(0,KSZ,0,KSZ), AnchorPoint = Vector2.new(0.5,0.5),
@@ -541,40 +531,32 @@ local function MkSlider(par, text, minV, maxV, defV, cb)
 	end)
 
 	return {
-		Set = function(_, v) setVal(v) end,
-		Get = function(_) return val end,
-		SetTitle = function(_, newText)
-			if textLbl then textLbl.Text = newText end
-		end,
-		SetMin = function(_, v) minV = v setVal(val) end,
-		SetMax = function(_, v) maxV = v setVal(val) end,
+		Set         = function(_, v) setVal(v) end,
+		Get         = function(_) return val end,
+		SetTitle    = function(_, newText) if textLbl then textLbl.Text = newText end end,
+		SetDesc     = function(_, _) end,
+		SetMin      = function(_, v) minV = v setVal(val) end,
+		SetMax      = function(_, v) maxV = v setVal(val) end,
 		SetCallback = function(_, newCb) cb = newCb end,
 	}
 end
 
--- // Elements DropDown
+-- // Dropdown Element
 local function MkDropdown(par, text, options, defV, cb)
 	local selected = defV or (options and options[1]) or ""
 	options = options or {}
-	local open    = false
-	local ITEM_H  = 28
+	local open   = false
+	local ITEM_H = 28
 
 	_order = _order + 1
 	local wrap = N("Frame", {
-		Size             = UDim2.new(1, 0, 0, EL_H),
-		BackgroundTransparency = 1,
-		ClipsDescendants = false,
-		LayoutOrder      = _order,
-		ZIndex           = 10,
-		Parent           = par,
+		Size = UDim2.new(1,0,0,EL_H), BackgroundTransparency = 1,
+		ClipsDescendants = false, LayoutOrder = _order, ZIndex = 10, Parent = par,
 	})
 
 	local header = N("Frame", {
-		Size             = UDim2.new(1, 0, 0, EL_H),
-		BackgroundColor3 = T.elBg,
-		BorderSizePixel  = 0,
-		ZIndex           = 11,
-		Parent           = wrap,
+		Size = UDim2.new(1,0,0,EL_H), BackgroundColor3 = T.elBg,
+		BorderSizePixel = 0, ZIndex = 11, Parent = wrap,
 	})
 	Corner(header, 6)
 	Stroke(header, T.elBorder, 1, 0.28)
@@ -589,7 +571,6 @@ local function MkDropdown(par, text, options, defV, cb)
 		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
 		ZIndex = 12, Parent = header,
 	})
-
 	local selLbl = N("TextLabel", {
 		Size = UDim2.new(0,88,1,0), Position = UDim2.new(1,-120,0,0),
 		BackgroundTransparency = 1, Text = selected, TextColor3 = T.Accent,
@@ -597,7 +578,6 @@ local function MkDropdown(par, text, options, defV, cb)
 		TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd,
 		ZIndex = 12, Parent = header,
 	})
-
 	local arrowBox = N("Frame", {
 		Size = UDim2.new(0,22,0,22), Position = UDim2.new(1,-30,0.5,-11),
 		BackgroundColor3 = Color3.fromRGB(22,22,22), BorderSizePixel = 0, ZIndex = 12, Parent = header,
@@ -607,27 +587,19 @@ local function MkDropdown(par, text, options, defV, cb)
 	local arrow = Img(icon("chevron-down"), arrowBox, 11, UDim2.new(0.5,-5.5,0.5,-5.5), T.dimLight, 13)
 
 	local listWrap = N("Frame", {
-		Size             = UDim2.new(1, 0, 0, 0),
-		Position         = UDim2.new(0, 0, 0, EL_H + 3),
-		BackgroundColor3 = T.dropBg,
-		BorderSizePixel  = 0,
-		ClipsDescendants = true,
-		ZIndex           = 10,
-		Parent           = wrap,
+		Size = UDim2.new(1,0,0,0), Position = UDim2.new(0,0,0,EL_H+3),
+		BackgroundColor3 = T.dropBg, BorderSizePixel = 0,
+		ClipsDescendants = true, ZIndex = 10, Parent = wrap,
 	})
 	Corner(listWrap, 6)
 	Stroke(listWrap, T.dropBorder, 1, 0.2)
 	Grad(listWrap, Color3.fromRGB(55,55,55), Color3.fromRGB(35,35,35), 90)
 
 	local listScroll = N("ScrollingFrame", {
-		Size                = UDim2.fromScale(1,1),
-		BackgroundTransparency = 1,
-		ScrollBarThickness  = 3,
-		ScrollBarImageColor3 = T.Accent,
-		CanvasSize          = UDim2.new(0,0,0,0),
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		ZIndex              = 11,
-		Parent              = listWrap,
+		Size = UDim2.fromScale(1,1), BackgroundTransparency = 1,
+		ScrollBarThickness = 3, ScrollBarImageColor3 = T.Accent,
+		CanvasSize = UDim2.new(0,0,0,0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ZIndex = 11, Parent = listWrap,
 	})
 	N("UIListLayout", {SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2), Parent=listScroll})
 	N("UIPadding", {
@@ -636,8 +608,8 @@ local function MkDropdown(par, text, options, defV, cb)
 		Parent=listScroll,
 	})
 
-	local MAX_ITEMS_SHOWN = 6
-	local fullH = math.min(#options, MAX_ITEMS_SHOWN) * (ITEM_H + 2) + 10
+	local MAX_SHOWN = 6
+	local fullH = math.min(#options, MAX_SHOWN) * (ITEM_H + 2) + 10
 
 	local function buildItems()
 		for _, c in ipairs(listScroll:GetChildren()) do
@@ -648,18 +620,13 @@ local function MkDropdown(par, text, options, defV, cb)
 		for i, opt in ipairs(options) do
 			local isSel = opt == selected
 			local row = N("Frame", {
-				Size             = UDim2.new(1,0,0,ITEM_H),
+				Size = UDim2.new(1,0,0,ITEM_H),
 				BackgroundColor3 = isSel and T.dropSel or Color3.fromRGB(50,50,50),
 				BackgroundTransparency = isSel and 0 or 0.5,
-				BorderSizePixel  = 0,
-				LayoutOrder      = i,
-				ZIndex           = 12,
-				Parent           = listScroll,
+				BorderSizePixel = 0, LayoutOrder = i, ZIndex = 12, Parent = listScroll,
 			})
 			Corner(row, 5)
-			if isSel then
-				Stroke(row, T.Accent, 1, 0.5)
-			end
+			if isSel then Stroke(row, T.Accent, 1, 0.5) end
 			N("TextLabel", {
 				Size = UDim2.new(1,-16,1,0), Position = UDim2.fromOffset(10,0),
 				BackgroundTransparency = 1, Text = opt,
@@ -677,9 +644,7 @@ local function MkDropdown(par, text, options, defV, cb)
 				end
 			end)
 			ob.MouseLeave:Connect(function()
-				if not isSel then
-					Tw(row, {BackgroundTransparency=0.5}, 0.07)
-				end
+				if not isSel then Tw(row, {BackgroundTransparency=0.5}, 0.07) end
 			end)
 			ob.MouseButton1Click:Connect(function()
 				selected = opt
@@ -688,7 +653,7 @@ local function MkDropdown(par, text, options, defV, cb)
 				local ok, err = pcall(function() if cb then cb(selected) end end)
 				if not ok then _Err("Dropdown", "callback failed: %s", err) end
 				open = false
-				Tw(listWrap, {Size=UDim2.new(1,0,0,0)}, 0.18, Enum.EasingStyle.Quint)
+				Tw(listWrap, {Size=UDim2.new(1,0,0,0)},    0.18, Enum.EasingStyle.Quint)
 				Tw(wrap,     {Size=UDim2.new(1,0,0,EL_H)}, 0.18, Enum.EasingStyle.Quint)
 				Tw(arrow,    {Rotation=0, ImageColor3=T.dimLight}, 0.14)
 				Tw(header,   {BackgroundColor3=T.elBg}, 0.12)
@@ -703,14 +668,14 @@ local function MkDropdown(par, text, options, defV, cb)
 	togBtn.MouseButton1Click:Connect(function()
 		open = not open
 		if open then
-			fullH = math.min(#options, MAX_ITEMS_SHOWN) * (ITEM_H + 2) + 10
+			fullH = math.min(#options, MAX_SHOWN) * (ITEM_H + 2) + 10
 			buildItems()
-			Tw(listWrap, {Size=UDim2.new(1,0,0,fullH)}, 0.2, Enum.EasingStyle.Quint)
+			Tw(listWrap, {Size=UDim2.new(1,0,0,fullH)},        0.2, Enum.EasingStyle.Quint)
 			Tw(wrap,     {Size=UDim2.new(1,0,0,EL_H+3+fullH)}, 0.2, Enum.EasingStyle.Quint)
-			Tw(arrow,    {Rotation=180, ImageColor3=T.Accent}, 0.15)
+			Tw(arrow,    {Rotation=180, ImageColor3=T.Accent},  0.15)
 			Tw(header,   {BackgroundColor3=T.elBgHov}, 0.12)
 		else
-			Tw(listWrap, {Size=UDim2.new(1,0,0,0)}, 0.18, Enum.EasingStyle.Quint)
+			Tw(listWrap, {Size=UDim2.new(1,0,0,0)},    0.18, Enum.EasingStyle.Quint)
 			Tw(wrap,     {Size=UDim2.new(1,0,0,EL_H)}, 0.18, Enum.EasingStyle.Quint)
 			Tw(arrow,    {Rotation=0, ImageColor3=T.dimLight}, 0.14)
 			Tw(header,   {BackgroundColor3=T.elBg}, 0.12)
@@ -729,20 +694,16 @@ local function MkDropdown(par, text, options, defV, cb)
 			if selLbl then selLbl.Text = v end
 			buildItems()
 		end,
-		Get = function(_) return selected end,
-		SetTitle = function(_, newText)
-			if textLbl then textLbl.Text = newText end
-		end,
-		SetOptions = function(_, o)
+		Get          = function(_) return selected end,
+		SetTitle     = function(_, newText) if textLbl then textLbl.Text = newText end end,
+		SetDesc      = function(_, _) end,
+		SetOptions   = function(_, o)
 			options = o
 			selected = o and o[1] or ""
 			if selLbl then selLbl.Text = selected end
 			buildItems()
 		end,
-		AddOption = function(_, o)
-			table.insert(options, o)
-			buildItems()
-		end,
+		AddOption    = function(_, o) table.insert(options, o) buildItems() end,
 		RemoveOption = function(_, o)
 			for i, v in ipairs(options) do
 				if v == o then table.remove(options, i) break end
@@ -753,11 +714,11 @@ local function MkDropdown(par, text, options, defV, cb)
 			end
 			buildItems()
 		end,
-		SetCallback = function(_, newCb) cb = newCb end,
+		SetCallback  = function(_, newCb) cb = newCb end,
 	}
 end
 
--- // Elements Key Bind
+-- // Keybind Element
 local function MkKeybind(par, text, defKey, cb)
 	local key = defKey or Enum.KeyCode.Unknown
 	local listening = false
@@ -772,7 +733,6 @@ local function MkKeybind(par, text, defKey, cb)
 		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
 		ZIndex = 4, Parent = f,
 	})
-
 	local kBox = N("Frame", {
 		Size = UDim2.new(0,90,0,22), Position = UDim2.new(1,-100,0.5,-11),
 		BackgroundColor3 = Color3.fromRGB(16,16,16), BorderSizePixel = 0, ZIndex = 5, Parent = f,
@@ -781,7 +741,6 @@ local function MkKeybind(par, text, defKey, cb)
 	Grad(kBox, Color3.fromRGB(26,26,26), Color3.fromRGB(13,13,13), 90)
 	Noise(kBox, 0.88, 6)
 	local kStr = N("UIStroke", {Color=T.Accent, Thickness=1, Transparency=0.5, Parent=kBox})
-
 	local kname = key == Enum.KeyCode.Unknown and "None" or key.Name
 	local kLbl = N("TextLabel", {
 		Size = UDim2.fromScale(1,1), BackgroundTransparency = 1,
@@ -823,15 +782,14 @@ local function MkKeybind(par, text, defKey, cb)
 			local n = k == Enum.KeyCode.Unknown and "None" or k.Name
 			if kLbl then kLbl.Text = "[ "..n.." ]" end
 		end,
-		Get = function(_) return key end,
-		SetTitle = function(_, newText)
-			if textLbl then textLbl.Text = newText end
-		end,
+		Get         = function(_) return key end,
+		SetTitle    = function(_, newText) if textLbl then textLbl.Text = newText end end,
+		SetDesc     = function(_, _) end,
 		SetCallback = function(_, newCb) cb = newCb end,
 	}
 end
 
--- Elements ColorPicker
+-- // Color Picker Element
 local function MkColorPicker(par, text, defCol, cb)
 	local color = defCol or Color3.fromRGB(255, 80, 80)
 	local open = false
@@ -841,14 +799,13 @@ local function MkColorPicker(par, text, defCol, cb)
 	local PREVIEW_H = 46
 	local HEX_H     = 28
 	local GAP       = 6
-	local PICK_H = PAD + SLIDER_H + GAP_SL + SLIDER_H + GAP_SL + SLIDER_H + GAP + PREVIEW_H + GAP + HEX_H + PAD
+	local PICK_H    = PAD + SLIDER_H + GAP_SL + SLIDER_H + GAP_SL + SLIDER_H + GAP + PREVIEW_H + GAP + HEX_H + PAD
 
 	_order = _order + 1
 	local wrap = N("Frame", {
 		Size = UDim2.new(1,0,0,EL_H), BackgroundTransparency=1,
 		ClipsDescendants=false, LayoutOrder=_order, ZIndex=10, Parent=par,
 	})
-
 	local header = N("Frame", {
 		Size=UDim2.new(1,0,0,EL_H), BackgroundColor3=T.elBg,
 		BorderSizePixel=0, ZIndex=11, Parent=wrap,
@@ -892,8 +849,8 @@ local function MkColorPicker(par, text, defCol, cb)
 	local bV = math.round(color.B * 255)
 
 	local function makeRGBRow(labelText, yOff, fillCol, initVal)
-		local RAIL_H2 = 3
-		local KSZ2    = 11
+		local RH = 3
+		local KS = 11
 		N("TextLabel", {
 			Size=UDim2.new(0,40,0,SLIDER_H), Position=UDim2.fromOffset(PAD,yOff),
 			BackgroundTransparency=1, Text=labelText,
@@ -916,44 +873,44 @@ local function MkColorPicker(par, text, defCol, cb)
 		local railOffL = PAD + 44
 		local railOffR = PAD + 44 + PAD + 36
 		local rail2 = N("Frame", {
-			Size=UDim2.new(1,-(railOffL+railOffR-PAD),0,RAIL_H2),
-			Position=UDim2.new(0,railOffL,0,yOff+(SLIDER_H-RAIL_H2)/2),
+			Size=UDim2.new(1,-(railOffL+railOffR-PAD),0,RH),
+			Position=UDim2.new(0,railOffL,0,yOff+(SLIDER_H-RH)/2),
 			BackgroundColor3=T.sliderRail, BorderSizePixel=0, ZIndex=13, Parent=pickInner,
 		})
-		Corner(rail2, RAIL_H2)
+		Corner(rail2, RH)
 		Stroke(rail2, T.elBorder, 1, 0.3)
-		local p2  = initVal / 255
+		local p2    = initVal / 255
 		local fill2 = N("Frame", {
 			Size=UDim2.new(p2,0,1,0), BackgroundColor3=fillCol,
 			BorderSizePixel=0, ZIndex=14, Parent=rail2,
 		})
-		Corner(fill2, RAIL_H2)
+		Corner(fill2, RH)
 		local inner2 = N("Frame", {
 			Size=UDim2.new(1,-12,1,0), Position=UDim2.new(0,6,0,0),
 			BackgroundTransparency=1, ZIndex=14, Parent=rail2,
 		})
 		local knob2 = N("Frame", {
-			Size=UDim2.new(0,KSZ2,0,KSZ2), AnchorPoint=Vector2.new(0.5,0.5),
+			Size=UDim2.new(0,KS,0,KS), AnchorPoint=Vector2.new(0.5,0.5),
 			Position=UDim2.new(p2,0,0.5,0), BackgroundColor3=T.white,
 			BorderSizePixel=0, ZIndex=15, Parent=inner2,
 		})
-		Corner(knob2, KSZ2)
+		Corner(knob2, KS)
 		N("UIStroke", {Color=fillCol, Thickness=1.5, Parent=knob2})
 		local hit2 = N("TextButton", {
 			Size=UDim2.new(1,0,0,24), Position=UDim2.new(0,0,0,-10),
 			BackgroundTransparency=1, Text="", ZIndex=16, Parent=rail2,
 		})
-		return { fill=fill2, knob=knob2, inner=inner2, valLbl=valLbl2, hit=hit2, KSZ=KSZ2 }
+		return { fill=fill2, knob=knob2, inner=inner2, valLbl=valLbl2, hit=hit2, KSZ=KS }
 	end
 
 	local y1 = PAD
 	local y2 = y1 + SLIDER_H + GAP_SL
 	local y3 = y2 + SLIDER_H + GAP_SL
-	local sR = makeRGBRow("Red",   y1, Color3.fromRGB(220,60,60),   rV)
-	local sG = makeRGBRow("Green", y2, Color3.fromRGB(60,200,80),   gV)
-	local sB = makeRGBRow("Blue",  y3, Color3.fromRGB(60,130,220),  bV)
+	local sR = makeRGBRow("Red",   y1, Color3.fromRGB(220,60,60),  rV)
+	local sG = makeRGBRow("Green", y2, Color3.fromRGB(60,200,80),  gV)
+	local sB = makeRGBRow("Blue",  y3, Color3.fromRGB(60,130,220), bV)
 
-	local prevY = y3 + SLIDER_H + GAP
+	local prevY   = y3 + SLIDER_H + GAP
 	local preview = N("Frame", {
 		Size=UDim2.new(1,-(PAD*2),0,PREVIEW_H), Position=UDim2.fromOffset(PAD,prevY),
 		BackgroundColor3=color, BorderSizePixel=0, ZIndex=12, Parent=pickInner,
@@ -961,7 +918,7 @@ local function MkColorPicker(par, text, defCol, cb)
 	Corner(preview, 6)
 	Stroke(preview, T.elBorder, 1, 0.15)
 
-	local hexY = prevY + PREVIEW_H + GAP
+	local hexY   = prevY + PREVIEW_H + GAP
 	local hexRow = N("Frame", {
 		Size=UDim2.new(1,-(PAD*2),0,HEX_H), Position=UDim2.fromOffset(PAD,hexY),
 		BackgroundColor3=T.inputBg, BorderSizePixel=0, ZIndex=12, Parent=pickInner,
@@ -989,17 +946,17 @@ local function MkColorPicker(par, text, defCol, cb)
 	Corner(hexSwatch, 3)
 	Stroke(hexSwatch, Color3.fromRGB(60,60,60), 1, 0)
 
-	local function syncAll(skipHexUpdate)
+	local function syncAll(skipHex)
 		color = Color3.fromRGB(rV, gV, bV)
 		local ok2, err2 = pcall(function()
 			hSwatch.BackgroundColor3   = color
 			preview.BackgroundColor3   = color
 			hexSwatch.BackgroundColor3 = color
-			if not skipHexUpdate and hexInput then
+			if not skipHex and hexInput then
 				hexInput.Text = color:ToHex():upper()
 			end
 		end)
-		if not ok2 then _Err("ColorPicker", "failed to sync UI: %s", err2) end
+		if not ok2 then _Err("ColorPicker", "sync UI failed: %s", err2) end
 		local ok3, err3 = pcall(function() if cb then cb(color) end end)
 		if not ok3 then _Err("ColorPicker", "callback failed: %s", err3) end
 	end
@@ -1014,9 +971,9 @@ local function MkColorPicker(par, text, defCol, cb)
 	end
 
 	local function wireSlider(sl, setFn)
-		local dragActive = false
+		local dragA = false
 		sl.hit.MouseButton1Down:Connect(function()
-			dragActive = true
+			dragA = true
 			local mp = UIS:GetMouseLocation()
 			local ab, sz = sl.inner.AbsolutePosition, sl.inner.AbsoluteSize
 			local v = applySlider(sl, math.clamp((mp.X-ab.X)/sz.X,0,1)*255)
@@ -1026,20 +983,20 @@ local function MkColorPicker(par, text, defCol, cb)
 			Tw(sl.knob, {Size=UDim2.new(0,sl.KSZ+2,0,sl.KSZ+2)}, 0.1, Enum.EasingStyle.Back)
 		end)
 		sl.hit.MouseLeave:Connect(function()
-			if not dragActive then
+			if not dragA then
 				Tw(sl.knob, {Size=UDim2.new(0,sl.KSZ,0,sl.KSZ)}, 0.1, Enum.EasingStyle.Back)
 			end
 		end)
 		UIS.InputEnded:Connect(function(inp)
 			if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-				if dragActive then
+				if dragA then
 					Tw(sl.knob, {Size=UDim2.new(0,sl.KSZ,0,sl.KSZ)}, 0.1, Enum.EasingStyle.Back)
 				end
-				dragActive = false
+				dragA = false
 			end
 		end)
 		RS.RenderStepped:Connect(function()
-			if not dragActive or not open then return end
+			if not dragA or not open then return end
 			local mp = UIS:GetMouseLocation()
 			local ab, sz = sl.inner.AbsolutePosition, sl.inner.AbsoluteSize
 			local v = applySlider(sl, math.clamp((mp.X-ab.X)/sz.X,0,1)*255)
@@ -1065,15 +1022,14 @@ local function MkColorPicker(par, text, defCol, cb)
 				syncAll(true)
 				hexInput.Text = color:ToHex():upper()
 			else
-				_Err("ColorPicker", "invalid hex value -> %s", txt)
+				_Err("ColorPicker", "invalid hex value: %s", txt)
 				hexInput.Text = color:ToHex():upper()
 			end
 		end)
 	end
 
 	local togBtn = N("TextButton", {
-		Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
-		Text="", ZIndex=15, Parent=header,
+		Size=UDim2.fromScale(1,1), BackgroundTransparency=1, Text="", ZIndex=15, Parent=header,
 	})
 	togBtn.MouseButton1Click:Connect(function()
 		open = not open
@@ -1100,15 +1056,14 @@ local function MkColorPicker(par, text, defCol, cb)
 			applySlider(sR,rV) applySlider(sG,gV) applySlider(sB,bV)
 			syncAll(false)
 		end,
-		Get = function(_) return color end,
-		SetTitle = function(_, newText)
-			if textLbl then textLbl.Text = newText end
-		end,
+		Get         = function(_) return color end,
+		SetTitle    = function(_, newText) if textLbl then textLbl.Text = newText end end,
+		SetDesc     = function(_, _) end,
 		SetCallback = function(_, newCb) cb = newCb end,
 	}
 end
 
--- // Elements Paragraph Atualizado
+-- // Paragraph Element
 local function MkParagraph(par, title, content)
 	local lineCount = math.max(1, math.ceil(#(content or "") / 46))
 	local dynH = math.max(24 + lineCount * 14 + 10, EL_H)
@@ -1141,31 +1096,36 @@ local function MkParagraph(par, title, content)
 		TextWrapped=true, ZIndex=4, Parent=f,
 	})
 
-	local function recalcHeight(t, c)
+	local function recalcHeight(c)
 		local lines = math.max(1, math.ceil(#(c or "") / 46))
-		f.Size = UDim2.new(1, 0, 0, math.max(24 + lines * 14 + 10, EL_H))
+		if f and f.Parent then
+			f.Size = UDim2.new(1, 0, 0, math.max(24 + lines * 14 + 10, EL_H))
+		end
 	end
 
 	return {
 		Set = function(_, v)
 			if contentLbl then contentLbl.Text = v or "" end
-			recalcHeight(titleLbl and titleLbl.Text or "", v)
+			recalcHeight(v)
 		end,
 		Get = function(_) return contentLbl and contentLbl.Text or "" end,
 		SetTitle = function(_, v)
 			if titleLbl then titleLbl.Text = v or "" end
-			recalcHeight(v, contentLbl and contentLbl.Text or "")
+		end,
+		SetDesc = function(_, v)
+			if contentLbl then contentLbl.Text = v or "" end
+			recalcHeight(v)
 		end,
 		SetContent = function(_, v)
 			if contentLbl then contentLbl.Text = v or "" end
-			recalcHeight(titleLbl and titleLbl.Text or "", v)
+			recalcHeight(v)
 		end,
 		GetTitle   = function(_) return titleLbl and titleLbl.Text or "" end,
 		GetContent = function(_) return contentLbl and contentLbl.Text or "" end,
 	}
 end
 
--- // Funçães
+-- // Section Object Builder
 local function MkSecObj(scroll)
 	local obj = {}
 	function obj:AddToggle(text, default, callback)
@@ -1199,7 +1159,7 @@ local function MkSecObj(scroll)
 	return obj
 end
 
--- // Window
+-- // Window System
 local lib = {}
 
 function lib:CreateWindow(opts)
@@ -1218,6 +1178,7 @@ function lib:CreateWindow(opts)
 	local lastSection  = nil
 	local curSW        = SIDE_W
 
+	-- // GUI Parent Detection
 	local guiParent
 	pcall(function() guiParent = gethui and gethui() end)
 	guiParent = guiParent or game:GetService("CoreGui")
@@ -1230,12 +1191,12 @@ function lib:CreateWindow(opts)
 		IgnoreGuiInset = true,
 		Parent         = guiParent,
 	})
-
 	if not gui then
 		_Err("CreateWindow", "failed to create ScreenGui")
 		return {}
 	end
 
+	-- // Main Panel
 	local main = N("Frame", {
 		AnchorPoint      = Vector2.new(0.5, 0.5),
 		Size             = UDim2.new(0, PANEL_W, 0, PANEL_H),
@@ -1246,12 +1207,12 @@ function lib:CreateWindow(opts)
 		ZIndex           = 1,
 		Parent           = gui,
 	})
-
 	if not main then
 		_Err("CreateWindow", "failed to create main frame")
 		return {}
 	end
 
+	-- // Title Bar
 	local titleBar = N("Frame",{
 		Size=UDim2.new(1,0,0,TITLE_H),
 		BackgroundColor3=T.surface, BorderSizePixel=0, ZIndex=8, Parent=main,
@@ -1278,6 +1239,7 @@ function lib:CreateWindow(opts)
 		})
 	end
 
+	-- // Sidebar
 	local sidebar = N("Frame",{
 		Size=UDim2.new(0,curSW,1,-TITLE_H), Position=UDim2.new(0,0,0,TITLE_H),
 		BackgroundColor3=T.sidebar, BorderSizePixel=0, ClipsDescendants=true,
@@ -1291,6 +1253,7 @@ function lib:CreateWindow(opts)
 		BackgroundColor3=T.divider, BorderSizePixel=0, ZIndex=5, Parent=main,
 	})
 
+	-- // Sidebar Logo
 	local logoArea = N("Frame",{
 		Size=UDim2.new(1,0,0,LOGO_H), BackgroundTransparency=1, ZIndex=5, Parent=sidebar,
 	})
@@ -1303,6 +1266,7 @@ function lib:CreateWindow(opts)
 		BackgroundColor3=T.divider, BorderSizePixel=0, ZIndex=5, Parent=logoArea,
 	})
 
+	-- // Sidebar Scroll
 	local sideScroll = N("ScrollingFrame",{
 		Size=UDim2.new(1,0,1,-(LOGO_H+72)), Position=UDim2.new(0,0,0,LOGO_H+2),
 		BackgroundTransparency=1, ScrollBarThickness=0,
@@ -1311,12 +1275,12 @@ function lib:CreateWindow(opts)
 	})
 	N("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,1),Parent=sideScroll})
 	N("UIPadding",{PaddingLeft=UDim.new(0,5),PaddingRight=UDim.new(0,5),PaddingTop=UDim.new(0,3),Parent=sideScroll})
-
 	N("Frame",{
 		Size=UDim2.new(1,-10,0,1), Position=UDim2.new(0,5,1,-66),
 		BackgroundColor3=T.divider, BorderSizePixel=0, ZIndex=5, Parent=sidebar,
 	})
 
+	-- // Collapse Button
 	local colBtn = N("TextButton",{
 		Size=UDim2.new(1,-10,0,22), Position=UDim2.new(0,5,1,-60),
 		BackgroundColor3=T.tabBgHov, BackgroundTransparency=1,
@@ -1331,6 +1295,7 @@ function lib:CreateWindow(opts)
 		TextXAlignment=Enum.TextXAlignment.Left, ZIndex=6, Parent=colBtn,
 	})
 
+	-- // Avatar Frame
 	local avFrame = N("Frame",{
 		Size=UDim2.new(1,-10,0,32), Position=UDim2.new(0,5,1,-34),
 		BackgroundColor3=T.avatarBg, BorderSizePixel=0, ZIndex=5, Parent=sidebar,
@@ -1360,23 +1325,22 @@ function lib:CreateWindow(opts)
 		local ok, url = pcall(function()
 			return Players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
 		end)
-		if ok and avImg then
-			avImg.Image = url
-		end
+		if ok and avImg then avImg.Image = url end
 	end)
 
+	-- // Page Content Area
 	local pageArea = N("Frame",{
 		Size=UDim2.new(1,-(curSW+1),1,-TITLE_H), Position=UDim2.new(0,curSW+1,0,TITLE_H),
 		BackgroundColor3=T.pageBg, BorderSizePixel=0, ClipsDescendants=true,
 		ZIndex=2, Parent=main,
 	})
-
 	local contentArea = N("Frame",{
-		Size=UDim2.fromScale(1,1), Position=UDim2.fromScale(0,0),
-		BackgroundColor3=T.pageBg, BorderSizePixel=0, ClipsDescendants=true,
+		Size=UDim2.fromScale(1,1), BackgroundColor3=T.pageBg,
+		BorderSizePixel=0, ClipsDescendants=true,
 		ZIndex=2, Parent=pageArea,
 	})
 
+	-- // Tab Underline Animation
 	local function animUL(ul, instant)
 		if not ul then return end
 		ul.Size = UDim2.new(0,0,0,2) ul.Visible = true
@@ -1384,11 +1348,9 @@ function lib:CreateWindow(opts)
 		else Tw(ul, {Size=UDim2.new(1,-8,0,2)}, 0.22) end
 	end
 
+	-- // Tab Selection
 	local function selectTab(tab, instant)
-		if not tab then
-			_Err("selectTab", "tab is nil")
-			return
-		end
+		if not tab then _Err("selectTab", "tab is nil") return end
 		for _, t in ipairs(tabs) do
 			if t ~= tab then
 				if t.page then t.page.Visible = false end
@@ -1406,6 +1368,7 @@ function lib:CreateWindow(opts)
 		animUL(tab.ul, instant)
 	end
 
+	-- // Sidebar Collapse/Expand
 	local function setSide(expanded)
 		sideExpanded = expanded
 		local sw = expanded and SIDE_W or SIDE_MINI
@@ -1435,7 +1398,7 @@ function lib:CreateWindow(opts)
 		end
 		colIco.Image    = expanded and icon("chevron-left") or icon("chevron-right")
 		colIco.Position = expanded and UDim2.new(1,-15,0.5,-6) or UDim2.new(0.5,-6,0.5,-6)
-		colLbl.Text = expanded and "Collapse" or "Expand"
+		colLbl.Text     = expanded and "Collapse" or "Expand"
 		Tw(colLbl, {TextTransparency=hide}, 0.15)
 	end
 
@@ -1449,6 +1412,7 @@ function lib:CreateWindow(opts)
 		Tw(colIco,{ImageColor3=T.dimLight},0.1) Tw(colLbl,{TextColor3=T.dimLight},0.1)
 	end)
 
+	-- // Drag System
 	titleBar.InputBegan:Connect(function(inp)
 		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
 			dragging = true
@@ -1468,6 +1432,7 @@ function lib:CreateWindow(opts)
 		)
 	end)
 
+	-- // Minimize Toggle
 	UIS.InputBegan:Connect(function(inp, _)
 		if inp.KeyCode == Enum.KeyCode.RightAlt then
 			minimized = not minimized
@@ -1475,6 +1440,7 @@ function lib:CreateWindow(opts)
 		end
 	end)
 
+	-- // Sidebar Section Label
 	local function makeSideLabel(labelText)
 		sideOrder = sideOrder + 1
 		N("Frame",{Size=UDim2.new(1,0,0,4),BackgroundTransparency=1,LayoutOrder=sideOrder,ZIndex=5,Parent=sideScroll})
@@ -1489,6 +1455,7 @@ function lib:CreateWindow(opts)
 		table.insert(secLabels, lbl)
 	end
 
+	-- // Window API
 	local window = {}
 
 	function window:SetTitle(newTitle)
@@ -1503,6 +1470,7 @@ function lib:CreateWindow(opts)
 		return _ErrorLog
 	end
 
+	-- // Add Tab
 	function window:AddTab(opts2)
 		opts2 = type(opts2) == "table" and opts2 or {}
 		local tabTitle   = opts2.Title   or "Tab"
@@ -1586,9 +1554,7 @@ function lib:CreateWindow(opts)
 		end)
 
 		if #tabs == 1 then
-			task.defer(function()
-				selectTab(tab, true)
-			end)
+			task.defer(function() selectTab(tab, true) end)
 		end
 
 		local tabObj = MkSecObj(scroll)
